@@ -1,0 +1,2036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard | Phishing URL and Smishing Detection System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f4f7fb;
+            --surface: #ffffff;
+            --surface-soft: #eef3f8;
+            --text: #172033;
+            --muted: #617089;
+            --line: #d9e2ec;
+            --primary: #1769aa;
+            --primary-dark: #0e4e81;
+            --safe: #15803d;
+            --warn: #b7791f;
+            --danger: #b42318;
+            --info: #475569;
+            --shadow: 0 18px 42px rgba(15, 23, 42, 0.09);
+            --radius: 8px;
+            --font: "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        [data-theme="dark"] {
+            --bg: #101722;
+            --surface: #151f2d;
+            --surface-soft: #1c2939;
+            --text: #edf4ff;
+            --muted: #a9b7c9;
+            --line: #304154;
+            --primary: #5fb3e8;
+            --primary-dark: #9bd4f6;
+            --safe: #4ade80;
+            --warn: #facc15;
+            --danger: #fb7185;
+            --info: #cbd5e1;
+            --shadow: 0 18px 42px rgba(0, 0, 0, 0.25);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: var(--font);
+            background:
+                linear-gradient(135deg, rgba(23, 105, 170, 0.10), transparent 36%),
+                linear-gradient(225deg, rgba(21, 128, 61, 0.08), transparent 34%),
+                var(--bg);
+            color: var(--text);
+        }
+
+        button, input, select, textarea { font: inherit; }
+        button { cursor: pointer; }
+
+        .app-shell {
+            width: min(1180px, calc(100% - 28px));
+            margin: 18px auto 28px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 14px 0;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .brand-mark {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary), #1e8e5a);
+            box-shadow: var(--shadow);
+            flex: 0 0 auto;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 0;
+        }
+
+        .brand p {
+            margin: 2px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--muted);
+            border-radius: 999px;
+            padding: 8px 10px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 238px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+
+        .sidebar, .main-panel, .summary-card, .mini-panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar {
+            padding: 10px;
+            position: sticky;
+            top: 16px;
+        }
+
+        .nav-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+            padding: 11px 12px;
+            border-radius: 6px;
+            text-align: left;
+            font-weight: 650;
+        }
+
+        .nav-btn:hover { background: var(--surface-soft); color: var(--text); }
+        .nav-btn.active { background: rgba(23, 105, 170, 0.12); color: var(--primary-dark); }
+        .nav-btn i { width: 18px; text-align: center; }
+
+        .main-panel {
+            min-height: 660px;
+            overflow: hidden;
+        }
+
+        .panel {
+            display: none;
+            padding: 22px;
+            animation: fadeIn 160ms ease;
+        }
+
+        .panel.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 16px;
+            margin-bottom: 18px;
+        }
+
+        .panel-header h2 {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: 0;
+        }
+
+        .panel-header p {
+            margin: 6px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+            max-width: 720px;
+            line-height: 1.45;
+        }
+
+        .grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        .grid.two { grid-template-columns: minmax(0, 1fr) minmax(300px, 0.72fr); }
+        .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+        .mini-panel {
+            box-shadow: none;
+            padding: 16px;
+        }
+
+        .mini-panel h3 {
+            margin: 0 0 12px;
+            font-size: 15px;
+        }
+
+        .field {
+            display: grid;
+            gap: 7px;
+            margin-bottom: 14px;
+        }
+
+        label {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 7px;
+            background: var(--surface);
+            color: var(--text);
+            padding: 11px 12px;
+            outline: none;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 136px;
+            line-height: 1.45;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(23, 105, 170, 0.14);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 8px;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--text);
+            border-radius: 7px;
+            padding: 10px 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 700;
+            min-height: 40px;
+        }
+
+        .btn.primary {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .btn.danger {
+            border-color: rgba(180, 35, 24, 0.35);
+            color: var(--danger);
+        }
+
+        .btn:hover { filter: brightness(0.98); transform: translateY(-1px); }
+
+        .result-box {
+            display: none;
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            padding: 16px;
+            margin-top: 16px;
+            background: var(--surface-soft);
+        }
+
+        .result-box.show { display: block; }
+
+        .verdict {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .verdict-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            flex: 0 0 auto;
+        }
+
+        .verdict h3 { margin: 0; font-size: 18px; }
+        .verdict p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+
+        .risk-safe .verdict-icon { background: var(--safe); }
+        .risk-suspicious .verdict-icon { background: var(--warn); }
+        .risk-danger .verdict-icon { background: var(--danger); }
+
+        .meter {
+            height: 12px;
+            background: var(--line);
+            border-radius: 999px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .meter span {
+            display: block;
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            transition: width 220ms ease;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .chip {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--muted);
+            border-radius: 999px;
+            padding: 6px 9px;
+            font-size: 12px;
+            font-weight: 650;
+        }
+
+        .reason-list {
+            margin: 12px 0 0;
+            padding-left: 18px;
+            color: var(--muted);
+            line-height: 1.55;
+            font-size: 13px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .summary-card {
+            box-shadow: none;
+            padding: 16px;
+        }
+
+        .summary-card span {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .summary-card strong {
+            display: block;
+            font-size: 26px;
+            margin-top: 6px;
+        }
+
+        .bar-row {
+            display: grid;
+            grid-template-columns: 104px 1fr 40px;
+            align-items: center;
+            gap: 10px;
+            margin: 11px 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .bar {
+            height: 10px;
+            border-radius: 999px;
+            background: var(--line);
+            overflow: hidden;
+        }
+
+        .bar span { display: block; height: 100%; background: var(--primary); }
+
+        .history-list {
+            display: grid;
+            gap: 10px;
+            max-height: 460px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .history-item {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 7px;
+            padding: 12px;
+        }
+
+        .history-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .history-item code {
+            display: block;
+            color: var(--muted);
+            word-break: break-all;
+            margin-top: 8px;
+            font-size: 12px;
+        }
+
+        .assistant-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 280px;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .chat-window {
+            height: 520px;
+            overflow: auto;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--surface-soft);
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-message {
+            max-width: 84%;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 11px 12px;
+            background: var(--surface);
+            color: var(--text);
+            line-height: 1.45;
+            font-size: 13px;
+            white-space: pre-line;
+        }
+
+        .chat-message.user {
+            align-self: flex-end;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .chat-message.agent {
+            align-self: flex-start;
+        }
+
+        .assistant-input {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .quick-prompts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .quick-prompts .btn {
+            min-height: 34px;
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .floating-assistant {
+            position: fixed;
+            right: 22px;
+            bottom: 22px;
+            z-index: 50;
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        .floating-greeting {
+            width: 250px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow);
+            border-radius: 8px;
+            padding: 14px 16px;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.45;
+            position: relative;
+        }
+
+        .floating-greeting::after {
+            content: "";
+            position: absolute;
+            right: -8px;
+            bottom: 20px;
+            border-width: 8px 0 8px 8px;
+            border-style: solid;
+            border-color: transparent transparent transparent var(--surface);
+        }
+
+        .floating-close {
+            position: absolute;
+            left: -7px;
+            top: -7px;
+            width: 18px;
+            height: 18px;
+            border: 0;
+            border-radius: 50%;
+            color: #fff;
+            background: var(--danger);
+            display: grid;
+            place-items: center;
+            font-size: 11px;
+            padding: 0;
+        }
+
+        .assistant-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 5px solid #59b84b;
+            background: linear-gradient(145deg, #ffffff, #dcefff);
+            box-shadow: var(--shadow);
+            display: grid;
+            place-items: center;
+            color: var(--primary);
+            font-size: 30px;
+            flex: 0 0 auto;
+        }
+
+        .assistant-avatar:hover {
+            transform: translateY(-2px);
+        }
+
+        .floating-chat-panel {
+            position: fixed;
+            right: 22px;
+            bottom: 104px;
+            width: min(390px, calc(100vw - 28px));
+            height: 560px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            box-shadow: 0 22px 70px rgba(15, 23, 42, 0.28);
+            z-index: 51;
+            overflow: hidden;
+            display: none;
+            flex-direction: column;
+        }
+
+        .floating-chat-panel.open {
+            display: flex;
+        }
+
+        .floating-chat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 13px 14px;
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary), #1e8e5a);
+        }
+
+        .floating-chat-header strong {
+            display: block;
+        }
+
+        .floating-chat-header span {
+            display: block;
+            font-size: 12px;
+            opacity: 0.88;
+            margin-top: 2px;
+        }
+
+        .floating-chat-body {
+            flex: 1;
+            overflow: auto;
+            padding: 12px;
+            background: var(--surface-soft);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .floating-chat-footer {
+            border-top: 1px solid var(--line);
+            padding: 10px;
+            background: var(--surface);
+        }
+
+        .floating-chat-footer .assistant-input {
+            margin-top: 8px;
+        }
+
+        .floating-chat-footer input {
+            min-height: 40px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 750;
+            border: 1px solid var(--line);
+        }
+
+        .badge.safe { color: var(--safe); }
+        .badge.warn { color: var(--warn); }
+        .badge.danger { color: var(--danger); }
+
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 720px;
+            background: var(--surface);
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            font-size: 13px;
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--muted);
+            text-transform: uppercase;
+            font-size: 12px;
+            background: var(--surface-soft);
+        }
+
+        .timeline {
+            display: grid;
+            gap: 12px;
+        }
+
+        .step {
+            border-left: 3px solid var(--primary);
+            padding: 8px 0 8px 12px;
+        }
+
+        .step strong { display: block; }
+        .step span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+        #qrRegion { display: none; margin-top: 14px; }
+        #qrRegion.show { display: block; }
+        #qr-reader { width: 100%; max-width: 480px; margin: 0 auto; }
+
+        .switch-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .switch-row:last-child { border-bottom: 0; }
+
+        .switch-row span {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .grid.two, .grid.three, .grid.four, .stats, .assistant-shell { grid-template-columns: 1fr; }
+            .panel-header { display: block; }
+            .topbar { align-items: flex-start; flex-direction: column; }
+            .top-actions { justify-content: flex-start; }
+        }
+
+        @media (max-width: 560px) {
+            .app-shell { width: min(100% - 16px, 1180px); }
+            .panel { padding: 16px; }
+            .sidebar { grid-template-columns: 1fr; }
+            .input-row { grid-template-columns: 1fr; }
+            .brand h1 { font-size: 20px; }
+            .floating-assistant { right: 14px; bottom: 14px; }
+            .floating-greeting { display: none; }
+            .assistant-avatar { width: 62px; height: 62px; font-size: 26px; }
+            .floating-chat-panel { right: 8px; bottom: 86px; width: calc(100vw - 16px); height: min(560px, calc(100vh - 110px)); }
+            .assistant-input { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark"><i class="fa-solid fa-shield-halved"></i></div>
+                <div>
+                    <h1>PhishGuard</h1>
+                    <p>Phishing URL and Smishing Detection System</p>
+                </div>
+            </div>
+            <div class="top-actions">
+                <span class="status-pill"><i class="fa-solid fa-database"></i><span id="dbStatus">Rule DB loaded</span></span>
+                <span class="status-pill"><i class="fa-solid fa-brain"></i> Hybrid scoring engine</span>
+                <button class="btn" onclick="toggleTheme()" title="Toggle theme"><i class="fa-solid fa-circle-half-stroke"></i> Theme</button>
+            </div>
+        </header>
+
+        <div class="layout">
+            <nav class="sidebar" aria-label="Main navigation">
+                <button class="nav-btn active" onclick="switchTab('scanner', this)"><i class="fa-solid fa-link"></i> URL Scanner</button>
+                <button class="nav-btn" onclick="switchTab('sms', this)"><i class="fa-solid fa-message"></i> SMS Scanner</button>
+                <button class="nav-btn" onclick="switchTab('assistant', this)"><i class="fa-solid fa-robot"></i> AI Assistant</button>
+                <button class="nav-btn" onclick="switchTab('dashboard', this)"><i class="fa-solid fa-chart-simple"></i> Dashboard</button>
+                <button class="nav-btn" onclick="switchTab('history', this)"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+                <button class="nav-btn" onclick="switchTab('evidence', this)"><i class="fa-solid fa-file-shield"></i> Evidence</button>
+                <button class="nav-btn" onclick="switchTab('tools', this)"><i class="fa-solid fa-screwdriver-wrench"></i> Tools</button>
+                <button class="nav-btn" onclick="switchTab('learn', this)"><i class="fa-solid fa-book-open"></i> Learn</button>
+                <button class="nav-btn" onclick="switchTab('about', this)"><i class="fa-solid fa-diagram-project"></i> Project</button>
+                <button class="nav-btn" onclick="switchTab('settings', this)"><i class="fa-solid fa-gear"></i> Settings</button>
+            </nav>
+
+            <main class="main-panel">
+                <section id="scannerPanel" class="panel active">
+                    <div class="panel-header">
+                        <div>
+                            <h2>URL Scanner</h2>
+                            <p>Analyzes lexical, domain, brand impersonation, HTTPS, shortener, and suspicious keyword features. The score is explainable so it can be defended in project review.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid two">
+                        <div class="mini-panel">
+                            <div class="field">
+                                <label for="serviceSelect">Brand Mode</label>
+                                <select id="serviceSelect"></select>
+                            </div>
+                            <div class="field">
+                                <label for="urlInput">URL or Domain</label>
+                                <div class="input-row">
+                                    <input type="text" id="urlInput" placeholder="https://secure-bank-login.example.com/verify" autocomplete="off">
+                                    <button class="btn" onclick="pasteTo('urlInput')"><i class="fa-solid fa-clipboard"></i> Paste</button>
+                                    <button class="btn" onclick="clearInput('urlInput', 'urlResult')"><i class="fa-solid fa-eraser"></i> Clear</button>
+                                </div>
+                            </div>
+                            <div class="controls">
+                                <button class="btn primary" onclick="scanURL()"><i class="fa-solid fa-magnifying-glass"></i> Scan Link</button>
+                                <button class="btn" id="startQrBtn" onclick="startQR()"><i class="fa-solid fa-qrcode"></i> Start QR</button>
+                                <button class="btn danger" id="stopQrBtn" onclick="stopQR()" style="display:none;"><i class="fa-solid fa-stop"></i> Stop QR</button>
+                                <button class="btn" onclick="loadSampleUrl()"><i class="fa-solid fa-vial"></i> Sample</button>
+                            </div>
+                            <div id="qrRegion">
+                                <div id="qr-reader"></div>
+                            </div>
+                        </div>
+
+                        <div class="mini-panel">
+                            <h3>Detection Model</h3>
+                            <div class="timeline">
+                                <div class="step"><strong>Feature extraction</strong><span>Parses URL structure, symbols, TLD, HTTPS, domain depth, and risky vocabulary.</span></div>
+                                <div class="step"><strong>Auto brand detection</strong><span>Detects official domains, brand impersonation, and typosquatting without manual website selection.</span></div>
+                                <div class="step"><strong>Risk classification</strong><span>Maps weighted feature score to Safe, Suspicious, or Phishing.</span></div>
+                                <div class="step"><strong>Evidence logging</strong><span>Stores timestamp, score, reasons, and SHA-256 fingerprint locally.</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="urlResult" class="result-box"></div>
+                </section>
+
+                <section id="smsPanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>SMS Smishing Scanner</h2>
+                            <p>Detects scam intent from urgency, financial pressure, reward bait, identity verification, embedded links, and risky language patterns.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid two">
+                        <div class="mini-panel">
+                            <div class="field">
+                                <label for="smsInput">SMS Content</label>
+                                <textarea id="smsInput" placeholder="Your account KYC will expire today. Verify now using this link..."></textarea>
+                            </div>
+                            <div class="controls">
+                                <button class="btn primary" onclick="scanSMS()"><i class="fa-solid fa-magnifying-glass-chart"></i> Analyze SMS</button>
+                                <button class="btn" onclick="pasteTo('smsInput')"><i class="fa-solid fa-clipboard"></i> Paste</button>
+                                <button class="btn" onclick="clearInput('smsInput', 'smsResult')"><i class="fa-solid fa-eraser"></i> Clear</button>
+                                <button class="btn" onclick="loadSampleSms()"><i class="fa-solid fa-vial"></i> Sample</button>
+                            </div>
+                        </div>
+                        <div class="mini-panel">
+                            <h3>Pattern Groups</h3>
+                            <div class="chips">
+                                <span class="chip">Urgency</span>
+                                <span class="chip">KYC / account block</span>
+                                <span class="chip">Rewards</span>
+                                <span class="chip">Payment risk</span>
+                                <span class="chip">Links</span>
+                                <span class="chip">OTP / password requests</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="smsResult" class="result-box"></div>
+                </section>
+
+                <section id="assistantPanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>AI Security Assistant</h2>
+                            <p>Interactive guidance agent for users. It explains scan results, suggests actions, answers project/viva questions, and helps users understand phishing signals.</p>
+                        </div>
+                        <button class="btn" onclick="resetAssistant()"><i class="fa-solid fa-rotate-left"></i> Reset Chat</button>
+                    </div>
+
+                    <div class="assistant-shell">
+                        <div class="mini-panel">
+                            <div id="assistantChat" class="chat-window assistant-feed" aria-live="polite"></div>
+                            <div class="assistant-input">
+                                <input id="assistantInput" type="text" placeholder="Ask: Why is this phishing? What should I do now?">
+                                <button class="btn primary" onclick="sendAssistantMessage()"><i class="fa-solid fa-paper-plane"></i> Send</button>
+                            </div>
+                        </div>
+                        <div class="mini-panel">
+                            <h3>Quick Questions</h3>
+                            <div class="quick-prompts">
+                                <button class="btn" onclick="askAssistant('Explain latest scan result')">Explain result</button>
+                                <button class="btn" onclick="askAssistant('What should the user do now?')">Next action</button>
+                                <button class="btn" onclick="askAssistant('Why is this URL risky?')">Risk reasons</button>
+                                <button class="btn" onclick="askAssistant('Give safety tips')">Safety tips</button>
+                                <button class="btn" onclick="askAssistant('How to explain this project in viva?')">Viva help</button>
+                                <button class="btn" onclick="askAssistant('What future scope can I mention?')">Future scope</button>
+                            </div>
+                            <div style="margin-top:16px;color:var(--muted);font-size:13px;line-height:1.5;">
+                                <strong style="color:var(--text);">Model type:</strong><br>
+                                Offline rule-based AI agent with context memory from the latest scan and project knowledge base.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="dashboardPanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Analytics Dashboard</h2>
+                            <p>Summarizes scan history using local browser storage. These metrics are useful for screenshots, project demo, and result analysis.</p>
+                        </div>
+                        <button class="btn" onclick="refreshDashboard()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                    </div>
+
+                    <div class="stats">
+                        <div class="summary-card"><span>Total Scans</span><strong id="statTotal">0</strong></div>
+                        <div class="summary-card"><span>Safe</span><strong id="statSafe">0</strong></div>
+                        <div class="summary-card"><span>Suspicious</span><strong id="statSuspicious">0</strong></div>
+                        <div class="summary-card"><span>Phishing</span><strong id="statPhishing">0</strong></div>
+                    </div>
+
+                    <div class="grid two" style="margin-top:14px;">
+                        <div class="mini-panel">
+                            <h3>Verdict Distribution</h3>
+                            <div id="verdictBars"></div>
+                        </div>
+                        <div class="mini-panel">
+                            <h3>Top Risk Features</h3>
+                            <div id="featureBars"></div>
+                        </div>
+                    </div>
+
+                    <div class="mini-panel" style="margin-top:14px;">
+                        <h3>Recent High Risk Scans</h3>
+                        <div id="recentRiskList" class="history-list"></div>
+                    </div>
+                </section>
+
+                <section id="historyPanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Scan History</h2>
+                            <p>Stores the last 150 scans in local storage. Export options help you attach evidence to your project report.</p>
+                        </div>
+                        <div class="controls">
+                            <button class="btn" onclick="exportHistoryCSV()"><i class="fa-solid fa-file-csv"></i> CSV</button>
+                            <button class="btn" onclick="exportHistoryJSON()"><i class="fa-solid fa-code"></i> JSON</button>
+                            <button class="btn" onclick="exportHistoryPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                            <button class="btn danger" onclick="clearHistory()"><i class="fa-solid fa-trash"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div id="historyList" class="history-list"></div>
+                </section>
+
+                <section id="evidencePanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Evidence Report</h2>
+                            <p>Generates a PDF report for the latest scan including verdict, score, risk reasons, SHA-256 fingerprint, timestamp, and recommended actions.</p>
+                        </div>
+                        <button class="btn primary" onclick="generateEvidenceReport()"><i class="fa-solid fa-file-arrow-down"></i> Generate PDF</button>
+                    </div>
+                    <div id="latestEvidence" class="mini-panel"></div>
+                </section>
+
+                <section id="toolsPanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Security Tools</h2>
+                            <p>Extra utilities make the project look complete and practical for end users.</p>
+                        </div>
+                    </div>
+                    <div class="grid two">
+                        <div class="mini-panel">
+                            <h3>Password Strength Checker</h3>
+                            <div class="field">
+                                <label for="passwordInput">Password</label>
+                                <input id="passwordInput" type="text" placeholder="Enter password to evaluate">
+                            </div>
+                            <div class="controls">
+                                <button class="btn primary" onclick="checkPassword()"><i class="fa-solid fa-key"></i> Check</button>
+                                <button class="btn" onclick="generatePassword()"><i class="fa-solid fa-wand-magic-sparkles"></i> Generate</button>
+                            </div>
+                            <div id="passwordResult" class="result-box"></div>
+                        </div>
+                        <div class="mini-panel">
+                            <h3>Domain Feature Extractor</h3>
+                            <p style="color:var(--muted);font-size:13px;line-height:1.45;">After scanning a URL, this section shows the extracted features. It helps explain the algorithm during viva.</p>
+                            <div id="featureTable"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="learnPanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Awareness Module</h2>
+                            <p>Short learning content for users. This improves project completeness because the system does prevention, detection, and education.</p>
+                        </div>
+                    </div>
+                    <div class="grid three">
+                        <div class="mini-panel"><h3>Check the Domain</h3><p style="color:var(--muted);line-height:1.5;">Attackers use small spelling changes such as paypa1.com, faceb00k.com, or extra subdomains.</p></div>
+                        <div class="mini-panel"><h3>Do Not Trust Urgency</h3><p style="color:var(--muted);line-height:1.5;">Messages saying account blocked, KYC expiring, or prize claim usually pressure users into mistakes.</p></div>
+                        <div class="mini-panel"><h3>Never Share OTP</h3><p style="color:var(--muted);line-height:1.5;">Banks and payment apps do not ask for OTP, PIN, CVV, or passwords through SMS links.</p></div>
+                    </div>
+                </section>
+
+                <section id="aboutPanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Project Documentation</h2>
+                            <p>This section makes the application presentable as a 3rd year BTech CSE project by clearly showing objectives, methodology, and future scope.</p>
+                        </div>
+                    </div>
+                    <div class="grid two">
+                        <div class="mini-panel">
+                            <h3>Problem Statement</h3>
+                            <p style="color:var(--muted);line-height:1.55;">Phishing and smishing attacks trick users into submitting credentials, OTPs, or financial information. This project detects suspicious links and SMS messages using explainable rule-based features and local evidence logging.</p>
+                            <h3>Objectives</h3>
+                            <ul class="reason-list">
+                                <li>Detect phishing URLs using lexical and domain-based features.</li>
+                                <li>Detect smishing messages using suspicious intent patterns.</li>
+                                <li>Generate explainable risk scores and evidence reports.</li>
+                                <li>Guide users through an AI-style security assistant.</li>
+                                <li>Provide analytics and awareness guidance for users.</li>
+                            </ul>
+                        </div>
+                        <div class="mini-panel">
+                            <h3>System Architecture</h3>
+                            <div class="timeline">
+                                <div class="step"><strong>Input Layer</strong><span>URL, SMS, pasted text, and QR scan input.</span></div>
+                                <div class="step"><strong>Preprocessing</strong><span>Normalization, URL parsing, keyword extraction, and feature generation.</span></div>
+                                <div class="step"><strong>Detection Engine</strong><span>Weighted rules plus brand similarity scoring.</span></div>
+                                <div class="step"><strong>AI Assistant Layer</strong><span>Context-aware guidance that explains verdicts, safety actions, and project logic.</span></div>
+                                <div class="step"><strong>Output Layer</strong><span>Verdict, dashboard, scan history, assistant guidance, and PDF report.</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mini-panel" style="margin-top:14px;">
+                        <h3>Future Scope</h3>
+                        <div class="chips">
+                            <span class="chip">Flask backend</span>
+                            <span class="chip">SQLite/MySQL database</span>
+                            <span class="chip">Random Forest model</span>
+                            <span class="chip">WHOIS domain age API</span>
+                            <span class="chip">Browser extension</span>
+                            <span class="chip">Admin rule management</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="settingsPanel" class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>Settings</h2>
+                            <p>Configure local behavior. Settings are stored in this browser only.</p>
+                        </div>
+                    </div>
+                    <div class="mini-panel">
+                        <div class="switch-row">
+                            <div><strong>Desktop notifications</strong><br><span>Show alert after high risk scan if browser permission is granted.</span></div>
+                            <input type="checkbox" id="notificationToggle">
+                        </div>
+                        <div class="switch-row">
+                            <div><strong>Auto scan pasted links</strong><br><span>Run URL scan immediately after using the paste button in URL field.</span></div>
+                            <input type="checkbox" id="autoScanToggle">
+                        </div>
+                        <div class="switch-row">
+                            <div><strong>Strict scoring mode</strong><br><span>Increases sensitivity for suspicious domains and shorteners.</span></div>
+                            <input type="checkbox" id="strictToggle">
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div id="floatingChatPanel" class="floating-chat-panel" aria-label="PhishGuard floating assistant">
+        <div class="floating-chat-header">
+            <div>
+                <strong>PhishGuard Assistant</strong>
+                <span>Ask anything about phishing safety</span>
+            </div>
+            <button class="btn" onclick="toggleFloatingAssistant(false)" title="Close assistant"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="floatingAssistantChat" class="floating-chat-body assistant-feed" aria-live="polite"></div>
+        <div class="floating-chat-footer">
+            <div class="quick-prompts">
+                <button class="btn" onclick="askFloatingAssistant('How to identify phishing?')">Identify phishing</button>
+                <button class="btn" onclick="askFloatingAssistant('What if I clicked a phishing link?')">Clicked link</button>
+                <button class="btn" onclick="askFloatingAssistant('Explain latest scan result')">Latest scan</button>
+            </div>
+            <div class="assistant-input">
+                <input id="floatingAssistantInput" type="text" placeholder="Ask about phishing, OTP scam, fake URL...">
+                <button class="btn primary" onclick="sendFloatingAssistantMessage()"><i class="fa-solid fa-paper-plane"></i> Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-assistant">
+        <div id="floatingGreeting" class="floating-greeting">
+            <button class="floating-close" onclick="hideFloatingGreeting()" title="Hide greeting">x</button>
+            Hey! I am PhishGuard Assistant. Ask me anything about phishing, fake links, OTP scams, or safe actions.
+        </div>
+        <button class="assistant-avatar" onclick="toggleFloatingAssistant()" title="Open phishing assistant">
+            <i class="fa-solid fa-user-shield"></i>
+        </button>
+    </div>
+
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        const officialServices = [
+            { id: "01", name: "Facebook", domain: "facebook.com" },
+            { id: "02", name: "Instagram", domain: "instagram.com" },
+            { id: "03", name: "Google", domain: "google.com" },
+            { id: "04", name: "Gmail", domain: "gmail.com" },
+            { id: "05", name: "Microsoft", domain: "microsoft.com" },
+            { id: "06", name: "Outlook", domain: "outlook.com" },
+            { id: "07", name: "Apple", domain: "apple.com" },
+            { id: "08", name: "Amazon", domain: "amazon.com" },
+            { id: "09", name: "PayPal", domain: "paypal.com" },
+            { id: "10", name: "Netflix", domain: "netflix.com" },
+            { id: "11", name: "WhatsApp", domain: "whatsapp.com" },
+            { id: "12", name: "PhonePe", domain: "phonepe.com" },
+            { id: "13", name: "Paytm", domain: "paytm.com" },
+            { id: "14", name: "State Bank of India", domain: "onlinesbi.sbi" },
+            { id: "15", name: "HDFC Bank", domain: "hdfcbank.com" },
+            { id: "16", name: "ICICI Bank", domain: "icicibank.com" },
+            { id: "17", name: "Axis Bank", domain: "axisbank.com" },
+            { id: "18", name: "Samsung", domain: "samsung.com" },
+            { id: "19", name: "Twitter/X", domain: "x.com" },
+            { id: "20", name: "LinkedIn", domain: "linkedin.com" }
+        ];
+
+        const suspiciousTlds = ["tk", "ml", "ga", "cf", "gq", "xyz", "top", "click", "work", "monster", "rest", "support", "zip"];
+        const shorteners = ["bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "is.gd", "buff.ly", "cutt.ly", "rebrand.ly", "s.id"];
+        const urlKeywords = ["login", "verify", "secure", "update", "bank", "account", "wallet", "kyc", "free", "bonus", "claim", "gift", "password", "unlock", "confirm", "limited"];
+        const knownPhishingDomains = [
+            "paypal-secure-login.verify-account.xyz",
+            "secure-kyc-update.click",
+            "bank-verify-account.top",
+            "account-unlock-support.xyz",
+            "free-gift-login.click",
+            "paytm-kyc-update.xyz",
+            "phonepe-refund-claim.top",
+            "sbi-online-verification.click",
+            "microsoft-security-alert.xyz",
+            "netflix-billing-update.click"
+        ];
+        const smsPatterns = {
+            urgency: ["urgent", "immediately", "today", "now", "expire", "last chance", "within 24 hours"],
+            account: ["blocked", "suspended", "locked", "verify", "kyc", "reactivate", "account"],
+            finance: ["bank", "upi", "wallet", "debit", "credit", "refund", "transaction", "payment"],
+            reward: ["winner", "prize", "gift", "cashback", "lottery", "bonus", "claim"],
+            secrets: ["otp", "pin", "cvv", "password", "credentials"]
+        };
+
+        const state = {
+            lastScan: null,
+            html5QrCode: null,
+            assistantMessages: []
+        };
+
+        const $ = (id) => document.getElementById(id);
+
+        function init() {
+            populateServices();
+            loadSettings();
+            loadHistory();
+            refreshDashboard();
+            updateEvidencePanel();
+            initAssistant();
+            $("dbStatus").textContent = `${officialServices.length} brands, ${urlKeywords.length} URL rules`;
+        }
+
+        function populateServices() {
+            const select = $("serviceSelect");
+            select.innerHTML = "";
+            const auto = document.createElement("option");
+            auto.value = "auto";
+            auto.dataset.name = "Auto Detect";
+            auto.textContent = "Auto Detect Brand / No Manual Selection";
+            select.appendChild(auto);
+            officialServices.forEach(service => {
+                const option = document.createElement("option");
+                option.value = service.domain;
+                option.dataset.name = service.name;
+                option.textContent = `Manual: [${service.id}] ${service.name} - ${service.domain}`;
+                select.appendChild(option);
+            });
+        }
+
+        function switchTab(tab, button) {
+            document.querySelectorAll(".panel").forEach(panel => panel.classList.remove("active"));
+            document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.remove("active"));
+            $(`${tab}Panel`).classList.add("active");
+            if (button) button.classList.add("active");
+            if (tab === "dashboard") refreshDashboard();
+            if (tab === "history") loadHistory();
+            if (tab === "evidence") updateEvidencePanel();
+            if (tab === "tools") renderFeatureTable();
+        }
+
+        async function pasteTo(id) {
+            try {
+                const text = await navigator.clipboard.readText();
+                $(id).value = text;
+                if (id === "urlInput" && $("autoScanToggle").checked) scanURL();
+            } catch (error) {
+                alert("Clipboard access failed. Use Ctrl+V instead.");
+            }
+        }
+
+        function clearInput(inputId, resultId) {
+            $(inputId).value = "";
+            if (resultId) $(resultId).classList.remove("show");
+        }
+
+        function normalizeUrl(raw) {
+            const input = raw.trim();
+            if (!input) throw new Error("empty");
+            const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? input : `http://${input}`;
+            return new URL(withProtocol);
+        }
+
+        function getRootDomain(hostname) {
+            const parts = hostname.replace(/^www\./, "").split(".");
+            if (parts.length <= 2) return parts.join(".");
+            const secondLevelTlds = ["co.in", "com.au", "co.uk", "com.bd"];
+            const lastTwo = parts.slice(-2).join(".");
+            const lastThree = parts.slice(-3).join(".");
+            return secondLevelTlds.includes(lastTwo) ? lastThree : lastTwo;
+        }
+
+        function levenshtein(a, b) {
+            const matrix = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+            for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+            for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j - 1] + cost
+                    );
+                }
+            }
+            return matrix[a.length][b.length];
+        }
+
+        function addReason(reasons, featureCounts, label, points, detail) {
+            reasons.push({ label, points, detail });
+            featureCounts.push(label);
+        }
+
+        function serviceLabel(service) {
+            return service.domain.split(".")[0].replace(/[^a-z0-9]/gi, "").toLowerCase();
+        }
+
+        function detectBrandFromUrl(hostname, rootDomain, fullUrl) {
+            const rootLabel = rootDomain.split(".")[0].replace(/[^a-z0-9]/gi, "").toLowerCase();
+            const cleanUrl = fullUrl.replace(/[^a-z0-9]/gi, "");
+            let best = null;
+
+            officialServices.forEach(service => {
+                const officialRoot = getRootDomain(service.domain);
+                const label = serviceLabel(service);
+                const exact = hostname === service.domain || hostname.endsWith(`.${service.domain}`);
+                const containsBrand = cleanUrl.includes(label);
+                const distance = levenshtein(rootLabel, label);
+                const typoLike = distance > 0 && distance <= 2;
+
+                if (exact) {
+                    best = { service, exact: true, containsBrand: true, typoLike: false, distance: 0 };
+                    return;
+                }
+
+                if (!best && (containsBrand || typoLike || rootDomain.includes(officialRoot))) {
+                    best = { service, exact: false, containsBrand, typoLike, distance };
+                }
+            });
+
+            return best;
+        }
+
+        function analyzeUrl(rawInput) {
+            const selected = $("serviceSelect");
+            const parsed = normalizeUrl(rawInput);
+            const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+            const rootDomain = getRootDomain(hostname);
+            const rootLabel = rootDomain.split(".")[0];
+            const tld = rootDomain.split(".").pop();
+            const pathText = `${parsed.pathname} ${parsed.search}`.toLowerCase();
+            const fullUrl = parsed.href.toLowerCase();
+            const reasons = [];
+            const featureCounts = [];
+            const strictBonus = $("strictToggle").checked ? 1.15 : 1;
+            let score = 0;
+            const manualMode = selected.value !== "auto";
+            const manualService = manualMode
+                ? officialServices.find(service => service.domain === selected.value)
+                : null;
+            const detectedBrand = manualMode
+                ? { service: manualService, exact: hostname === manualService.domain || hostname.endsWith(`.${manualService.domain}`), manual: true }
+                : detectBrandFromUrl(hostname, rootDomain, fullUrl);
+            const officialDomain = detectedBrand ? detectedBrand.service.domain : "";
+            const officialName = detectedBrand ? detectedBrand.service.name : "No known brand";
+
+            if (knownPhishingDomains.includes(hostname) || knownPhishingDomains.includes(rootDomain)) {
+                score += 45;
+                addReason(reasons, featureCounts, "Known phishing dataset match", 45, "Domain exists in the local phishing intelligence dataset.");
+            }
+
+            if (detectedBrand && detectedBrand.exact) {
+                score -= 30;
+                addReason(reasons, featureCounts, "Official domain match", -30, `Hostname belongs to ${officialName}.`);
+            } else if (detectedBrand && manualMode) {
+                score += 35;
+                addReason(reasons, featureCounts, "Brand domain mismatch", 35, `Expected ${officialDomain}, found ${hostname}.`);
+            } else if (detectedBrand && (detectedBrand.containsBrand || detectedBrand.typoLike)) {
+                score += 32;
+                addReason(reasons, featureCounts, "Auto-detected brand impersonation", 32, `URL appears to reference ${officialName}, but the real domain is ${officialDomain}.`);
+            } else {
+                addReason(reasons, featureCounts, "No brand match required", 0, "No known brand was confidently detected, so verdict is based on phishing features and dataset checks.");
+            }
+
+            const editDistance = detectedBrand ? levenshtein(rootLabel, serviceLabel(detectedBrand.service)) : 99;
+            if (detectedBrand && !detectedBrand.exact && editDistance > 0 && editDistance <= 2) {
+                score += 25;
+                addReason(reasons, featureCounts, "Typosquatting similarity", 25, `${rootLabel} is visually close to ${serviceLabel(detectedBrand.service)}.`);
+            }
+
+            if (/^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
+                score += 30;
+                addReason(reasons, featureCounts, "IP address hostname", 30, "Legitimate brands rarely use raw IP addresses for login pages.");
+            }
+
+            if (parsed.protocol !== "https:") {
+                score += 12;
+                addReason(reasons, featureCounts, "No HTTPS", 12, "Connection is not using HTTPS.");
+            }
+
+            if (fullUrl.includes("@")) {
+                score += 25;
+                addReason(reasons, featureCounts, "At symbol in URL", 25, "The @ symbol can hide the real destination.");
+            }
+
+            if (shorteners.includes(rootDomain)) {
+                score += 22 * strictBonus;
+                addReason(reasons, featureCounts, "URL shortener", Math.round(22 * strictBonus), "Short links hide the final destination.");
+            }
+
+            if (suspiciousTlds.includes(tld)) {
+                score += 14 * strictBonus;
+                addReason(reasons, featureCounts, "Suspicious TLD", Math.round(14 * strictBonus), `.${tld} is commonly abused in phishing campaigns.`);
+            }
+
+            if (hostname.split(".").length >= 4) {
+                score += 12;
+                addReason(reasons, featureCounts, "Too many subdomains", 12, "Deep subdomains can imitate official login pages.");
+            }
+
+            if (rawInput.length > 75) {
+                score += 10;
+                addReason(reasons, featureCounts, "Long URL", 10, "Very long URLs are harder for users to inspect.");
+            }
+
+            if ((hostname.match(/-/g) || []).length >= 2) {
+                score += 10;
+                addReason(reasons, featureCounts, "Multiple hyphens", 10, "Hyphen-heavy domains are common in fake brand domains.");
+            }
+
+            if (/xn--/.test(hostname)) {
+                score += 22;
+                addReason(reasons, featureCounts, "Punycode domain", 22, "Punycode can be used for homograph attacks.");
+            }
+
+            const keywordHits = urlKeywords.filter(word => fullUrl.includes(word));
+            if (keywordHits.length) {
+                const points = Math.min(24, keywordHits.length * 7);
+                score += points;
+                addReason(reasons, featureCounts, "Suspicious keywords", points, `Found: ${keywordHits.join(", ")}.`);
+            }
+
+            if (/\.(exe|apk|scr|bat|cmd|zip)(\?|$)/i.test(pathText)) {
+                score += 25;
+                addReason(reasons, featureCounts, "Risky file download", 25, "URL points to a potentially unsafe downloadable file.");
+            }
+
+            score = Math.max(0, Math.min(100, Math.round(score)));
+            const verdict = score >= 70 ? "Phishing" : score >= 35 ? "Suspicious" : "Safe";
+
+            return {
+                id: createId(),
+                type: "URL",
+                input: rawInput,
+                normalized: parsed.href,
+                hostname,
+                rootDomain,
+                officialName,
+                officialDomain,
+                brandMode: manualMode ? "Manual" : "Auto",
+                detectedBrand: detectedBrand ? officialName : "None",
+                score,
+                verdict,
+                reasons,
+                featureCounts,
+                timestamp: new Date().toLocaleString()
+            };
+        }
+
+        function analyzeSms(text) {
+            const content = text.trim();
+            if (!content) throw new Error("empty");
+            const lower = content.toLowerCase();
+            const reasons = [];
+            const featureCounts = [];
+            let score = 0;
+
+            Object.entries(smsPatterns).forEach(([group, words]) => {
+                const hits = words.filter(word => lower.includes(word));
+                if (hits.length) {
+                    const points = group === "secrets" ? 24 : Math.min(22, hits.length * 8);
+                    score += points;
+                    addReason(reasons, featureCounts, `SMS ${group} pattern`, points, `Found: ${hits.join(", ")}.`);
+                }
+            });
+
+            const urlMatches = lower.match(/https?:\/\/\S+|www\.\S+|\b[a-z0-9-]+\.(com|in|net|org|ly|click|xyz|top)\b/g);
+            if (urlMatches) {
+                score += 28;
+                addReason(reasons, featureCounts, "Embedded link", 28, "Message contains a clickable link.");
+            }
+
+            if (/\b\d{6}\b/.test(lower)) {
+                score += 8;
+                addReason(reasons, featureCounts, "OTP-like number", 8, "Message contains a 6 digit code pattern.");
+            }
+
+            if (content.length < 45 && /(click|verify|claim|login)/i.test(content)) {
+                score += 12;
+                addReason(reasons, featureCounts, "Short pressure message", 12, "Short urgent messages often hide context.");
+            }
+
+            score = Math.max(0, Math.min(100, Math.round(score)));
+            const verdict = score >= 70 ? "Phishing" : score >= 35 ? "Suspicious" : "Safe";
+
+            return {
+                id: createId(),
+                type: "SMS",
+                input: content,
+                score,
+                verdict,
+                reasons: reasons.length ? reasons : [{ label: "No risky pattern", points: 0, detail: "No known smishing pattern was detected." }],
+                featureCounts,
+                timestamp: new Date().toLocaleString()
+            };
+        }
+
+        async function scanURL() {
+            try {
+                const result = analyzeUrl($("urlInput").value);
+                result.hash = await generateHash(result.normalized);
+                state.lastScan = result;
+                renderResult("urlResult", result);
+                saveHistory(result);
+                renderFeatureTable();
+                updateEvidencePanel();
+                notifyIfNeeded(result);
+            } catch (error) {
+                alert("Please enter a valid URL or domain.");
+            }
+        }
+
+        async function scanSMS() {
+            try {
+                const result = analyzeSms($("smsInput").value);
+                result.hash = await generateHash(result.input);
+                state.lastScan = result;
+                renderResult("smsResult", result);
+                saveHistory(result);
+                updateEvidencePanel();
+                notifyIfNeeded(result);
+            } catch (error) {
+                alert("Please enter SMS content.");
+            }
+        }
+
+        function renderResult(targetId, result) {
+            const target = $(targetId);
+            const riskClass = result.verdict === "Safe" ? "risk-safe" : result.verdict === "Suspicious" ? "risk-suspicious" : "risk-danger";
+            const icon = result.verdict === "Safe" ? "fa-shield-check" : result.verdict === "Suspicious" ? "fa-triangle-exclamation" : "fa-ban";
+            const meterColor = result.verdict === "Safe" ? "var(--safe)" : result.verdict === "Suspicious" ? "var(--warn)" : "var(--danger)";
+
+            target.className = `result-box show ${riskClass}`;
+            target.innerHTML = `
+                <div class="verdict">
+                    <div class="verdict-icon"><i class="fa-solid ${icon}"></i></div>
+                    <div>
+                        <h3>${result.verdict} - Risk Score ${result.score}/100</h3>
+                        <p>${result.type} analysis completed at ${result.timestamp}</p>
+                    </div>
+                </div>
+                <div class="meter"><span style="width:${result.score}%;background:${meterColor};"></span></div>
+                <div class="chips">
+                    <span class="chip">Type: ${result.type}</span>
+                    ${result.hostname ? `<span class="chip">Host: ${escapeHtml(result.hostname)}</span>` : ""}
+                    ${result.officialDomain ? `<span class="chip">Expected: ${escapeHtml(result.officialDomain)}</span>` : ""}
+                    <span class="chip">Evidence ID: ${result.id}</span>
+                </div>
+                <ul class="reason-list">
+                    ${result.reasons.map(reason => `<li><strong>${escapeHtml(reason.label)} (${reason.points}):</strong> ${escapeHtml(reason.detail)}</li>`).join("")}
+                </ul>
+                <div class="controls" style="margin-top:14px;">
+                    <button class="btn" onclick="copyLatestResult()"><i class="fa-solid fa-copy"></i> Copy Result</button>
+                    <button class="btn" onclick="generateEvidenceReport()"><i class="fa-solid fa-file-pdf"></i> Evidence PDF</button>
+                    <button class="btn" onclick="openAssistantForLatest()"><i class="fa-solid fa-robot"></i> Ask AI Assistant</button>
+                </div>
+            `;
+        }
+
+        function openAssistantForLatest() {
+            const assistantButton = Array.from(document.querySelectorAll(".nav-btn")).find(button => button.textContent.includes("AI Assistant"));
+            switchTab("assistant", assistantButton);
+            askAssistant("Explain latest scan result");
+        }
+
+        function initAssistant() {
+            appendAssistantMessage("agent", "Hi, I am PhishGuard AI Assistant. Scan a URL or SMS, then ask me to explain the verdict, risk score, safety action, or viva answer.");
+            $("assistantInput").addEventListener("keydown", event => {
+                if (event.key === "Enter") sendAssistantMessage();
+            });
+            $("floatingAssistantInput").addEventListener("keydown", event => {
+                if (event.key === "Enter") sendFloatingAssistantMessage();
+            });
+        }
+
+        function resetAssistant() {
+            state.assistantMessages = [];
+            document.querySelectorAll(".assistant-feed").forEach(chat => { chat.innerHTML = ""; });
+            appendAssistantMessage("agent", "Chat reset. Ask me about phishing detection, latest scan result, safety steps, or how to explain this project.");
+        }
+
+        function askAssistant(prompt) {
+            $("assistantInput").value = prompt;
+            sendAssistantMessage();
+        }
+
+        function askFloatingAssistant(prompt) {
+            toggleFloatingAssistant(true);
+            $("floatingAssistantInput").value = prompt;
+            sendFloatingAssistantMessage();
+        }
+
+        function sendAssistantMessage() {
+            const input = $("assistantInput");
+            const message = input.value.trim();
+            if (!message) return;
+            appendAssistantMessage("user", message);
+            input.value = "";
+            const reply = generateAssistantReply(message);
+            appendAssistantMessage("agent", reply);
+        }
+
+        function sendFloatingAssistantMessage() {
+            const input = $("floatingAssistantInput");
+            const message = input.value.trim();
+            if (!message) return;
+            appendAssistantMessage("user", message);
+            input.value = "";
+            const reply = generateAssistantReply(message);
+            appendAssistantMessage("agent", reply);
+        }
+
+        function appendAssistantMessage(role, text) {
+            state.assistantMessages.push({ role, text });
+            document.querySelectorAll(".assistant-feed").forEach(chat => {
+                const bubble = document.createElement("div");
+                bubble.className = `chat-message ${role}`;
+                bubble.textContent = text;
+                chat.appendChild(bubble);
+                chat.scrollTop = chat.scrollHeight;
+            });
+        }
+
+        function toggleFloatingAssistant(forceOpen) {
+            const panel = $("floatingChatPanel");
+            const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : !panel.classList.contains("open");
+            panel.classList.toggle("open", shouldOpen);
+            if (shouldOpen) {
+                hideFloatingGreeting();
+                setTimeout(() => $("floatingAssistantInput").focus(), 50);
+            }
+        }
+
+        function hideFloatingGreeting() {
+            $("floatingGreeting").style.display = "none";
+        }
+
+        function generateAssistantReply(message) {
+            const text = message.toLowerCase();
+            const latest = state.lastScan || getHistory()[0];
+
+            if (/(viva|present|explain project|project|review|marks|teacher|guide)/.test(text)) {
+                return "Viva answer:\nPhishGuard is a cybersecurity mini project that detects phishing URLs and smishing SMS messages. It extracts features such as domain mismatch, suspicious TLD, HTTPS status, shortener usage, risky keywords, and SMS intent patterns. The system gives an explainable risk score, stores scan history, shows analytics, generates evidence reports, and uses an AI assistant to convert technical results into simple user guidance.";
+            }
+
+            if (/(latest|result|explain|score|verdict|why|risky|risk)/.test(text)) {
+                return latest ? explainLatestScan(latest) : "No scan is available yet. First scan a URL or SMS, then I can explain the verdict, score, and detected risk factors.";
+            }
+
+            if (/(clicked|opened|entered|shared|otp|password|pin|cvv|credential|bank|money|paid|lost)/.test(text)) {
+                return "If you clicked or entered details:\n1. Disconnect from the page and do not submit more information.\n2. Change the affected password from the official app/site.\n3. Enable 2FA and log out of other sessions.\n4. If banking/UPI/card data was shared, contact bank support immediately.\n5. Report the message/link and monitor transactions.\n6. If OTP/PIN/CVV was shared, treat it as urgent.";
+            }
+
+            if (/(do now|next|action|safe|opened)/.test(text)) {
+                return latest ? actionPlanForScan(latest) : "If you suspect a scam: do not click links, do not share OTP/PIN/password, verify from the official app or website, and report the message/link to the service provider.";
+            }
+
+            if (/(identify|detect|recognize|check|fake link|fake url|url|domain|website)/.test(text)) {
+                return "How to identify phishing URLs:\n1. Check the real domain, for example paypal.com is different from paypal-login.xyz.\n2. Look for spelling tricks like paypa1, faceb00k, or extra hyphens.\n3. Be careful with short links such as bit.ly when sent by unknown sources.\n4. Avoid links asking for OTP, password, PIN, CVV, or KYC update.\n5. HTTPS is good but not enough; phishing sites can also use HTTPS.\n6. When in doubt, open the official app or type the website manually.";
+            }
+
+            if (/(sms|smishing|message|whatsapp|telegram|kyc|account blocked|reward|prize|refund)/.test(text)) {
+                return "Smishing signs:\n1. Urgent words like blocked, suspended, expire today, verify now.\n2. Bank/KYC/payment pressure with a link.\n3. Prize, cashback, refund, or job offer bait.\n4. Asking for OTP, PIN, CVV, password, or remote app install.\n5. Unknown sender or strange shortened URL.\nSafe action: do not click; verify using the official app or helpline.";
+            }
+
+            if (/(email|mail|attachment|invoice|pdf|exe|apk|resume)/.test(text)) {
+                return "Email phishing signs:\n1. Sender address does not match the official domain.\n2. Unexpected attachments like .exe, .apk, .scr, or password-protected zip.\n3. Fake invoice, delivery, refund, or account warning.\n4. Link text says one thing but points somewhere else.\n5. Poor grammar, urgency, or threat.\nBefore opening attachments, confirm with the sender through a trusted channel.";
+            }
+
+            if (/(type|types|spear|whaling|vishing|pharming|clone|angler)/.test(text)) {
+                return "Common phishing types:\n1. Email phishing: fake emails with links or attachments.\n2. Smishing: phishing through SMS or messaging apps.\n3. Vishing: phone-call scams asking for sensitive data.\n4. Spear phishing: targeted attack on a specific person.\n5. Whaling: targeted attack on senior officials.\n6. Pharming: redirecting users to fake websites.\n7. Clone phishing: copying a real message and replacing links/files.";
+            }
+
+            if (/(report|complaint|cyber|police|helpline|india)/.test(text)) {
+                return "Reporting steps in India:\n1. For financial cyber fraud, call 1930 as soon as possible.\n2. Report on cybercrime.gov.in.\n3. Inform your bank/payment app support immediately.\n4. Save screenshots, sender number/email, URL, timestamp, and transaction IDs.\n5. Do not delete evidence until the complaint is recorded.";
+            }
+
+            if (/(tip|protect|prevent|avoid|security|advice)/.test(text)) {
+                return "Safety tips:\n1. Type important websites manually instead of opening SMS links.\n2. Check the real domain carefully, not just the logo or page design.\n3. Never share OTP, PIN, CVV, or password through a link.\n4. Be careful with urgent KYC, reward, refund, or account-block messages.\n5. Use 2FA and keep browser/device updates enabled.";
+            }
+
+            if (/(future|scope|upgrade|improve|ml|machine learning|backend)/.test(text)) {
+                return "Future scope:\n1. Add Flask/Node backend with user login.\n2. Store scans in SQLite/MySQL.\n3. Train Random Forest or Logistic Regression on a phishing URL dataset.\n4. Add WHOIS/domain-age API.\n5. Create browser extension for real-time protection.\n6. Add admin panel to update rules and blocked domains.";
+            }
+
+            if (/(how.*work|algorithm|model|architecture|features)/.test(text)) {
+                return "How it works:\nInput goes through preprocessing, then the detection engine extracts URL/SMS features. Each risky feature adds weighted points. Brand similarity uses edit distance to catch typosquatting. Final score is classified as Safe, Suspicious, or Phishing. The result is logged with timestamp, reasons, and SHA-256 evidence hash.";
+            }
+
+            return "I can help with scan explanation, safety actions, phishing awareness, project viva answers, algorithm explanation, and future scope. Try asking: 'Explain latest scan result' or 'What should the user do now?'";
+        }
+
+        function explainLatestScan(scan) {
+            const reasons = scan.reasons && scan.reasons.length
+                ? scan.reasons.map(reason => `- ${reason.label}: ${reason.detail}`).join("\n")
+                : "- No major risky pattern was found.";
+            const intro = scan.verdict === "Safe"
+                ? "This scan looks safe based on the current rule engine."
+                : scan.verdict === "Suspicious"
+                    ? "This scan has warning signs and should be verified before trusting it."
+                    : "This scan is high risk and should be treated as phishing.";
+            return `${intro}\n\nVerdict: ${scan.verdict}\nRisk score: ${scan.score}/100\nType: ${scan.type}\n\nMain reasons:\n${reasons}`;
+        }
+
+        function actionPlanForScan(scan) {
+            if (scan.verdict === "Safe") {
+                return "Action plan: The scan is marked Safe, but still confirm the domain before entering passwords or payment details. For banking/payment sites, open the official app or type the address manually.";
+            }
+            if (scan.verdict === "Suspicious") {
+                return "Action plan: Do not enter credentials yet. Verify the link from the official website/app, contact customer support through official channels, and avoid downloading files from this link.";
+            }
+            return "Action plan: Do not open the link again, do not share OTP/PIN/password/CVV, block or report the sender, and change your password immediately if you already entered credentials. For banking/payment scams, contact the bank support channel quickly.";
+        }
+
+        function saveHistory(result) {
+            const history = getHistory();
+            history.unshift(result);
+            localStorage.setItem("phishguard_history_v4", JSON.stringify(history.slice(0, 150)));
+            loadHistory();
+            refreshDashboard();
+        }
+
+        function getHistory() {
+            return JSON.parse(localStorage.getItem("phishguard_history_v4") || "[]");
+        }
+
+        function loadHistory() {
+            const history = getHistory();
+            const list = $("historyList");
+            if (!history.length) {
+                list.innerHTML = `<div class="mini-panel">No scans yet. Run a URL or SMS scan to populate history.</div>`;
+                return;
+            }
+
+            list.innerHTML = history.map(item => `
+                <div class="history-item">
+                    <div class="history-top">
+                        <strong>${item.type} Scan</strong>
+                        <span class="badge ${badgeClass(item.verdict)}">${item.verdict} - ${item.score}/100</span>
+                    </div>
+                    <small style="color:var(--muted);">${item.timestamp} | Evidence ID: ${item.id}</small>
+                    <code>${escapeHtml(item.input)}</code>
+                </div>
+            `).join("");
+        }
+
+        function clearHistory() {
+            if (!confirm("Clear all scan history?")) return;
+            localStorage.removeItem("phishguard_history_v4");
+            loadHistory();
+            refreshDashboard();
+            updateEvidencePanel();
+        }
+
+        function refreshDashboard() {
+            const history = getHistory();
+            const counts = {
+                Safe: history.filter(item => item.verdict === "Safe").length,
+                Suspicious: history.filter(item => item.verdict === "Suspicious").length,
+                Phishing: history.filter(item => item.verdict === "Phishing").length
+            };
+
+            $("statTotal").textContent = history.length;
+            $("statSafe").textContent = counts.Safe;
+            $("statSuspicious").textContent = counts.Suspicious;
+            $("statPhishing").textContent = counts.Phishing;
+            renderBars("verdictBars", counts);
+
+            const featureCounts = {};
+            history.flatMap(item => item.featureCounts || []).forEach(feature => {
+                featureCounts[feature] = (featureCounts[feature] || 0) + 1;
+            });
+            renderBars("featureBars", featureCounts, 6);
+
+            const highRisk = history.filter(item => item.verdict !== "Safe").slice(0, 5);
+            $("recentRiskList").innerHTML = highRisk.length ? highRisk.map(item => `
+                <div class="history-item">
+                    <div class="history-top"><strong>${item.type}</strong><span class="badge ${badgeClass(item.verdict)}">${item.verdict}</span></div>
+                    <code>${escapeHtml(item.input)}</code>
+                </div>
+            `).join("") : `<div class="mini-panel">No suspicious or phishing scans yet.</div>`;
+        }
+
+        function renderBars(targetId, data, limit = 10) {
+            const entries = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, limit);
+            const max = Math.max(1, ...entries.map(entry => entry[1]));
+            $(targetId).innerHTML = entries.length ? entries.map(([label, count]) => `
+                <div class="bar-row">
+                    <span>${escapeHtml(label)}</span>
+                    <div class="bar"><span style="width:${(count / max) * 100}%"></span></div>
+                    <strong>${count}</strong>
+                </div>
+            `).join("") : `<p style="color:var(--muted);">No data available.</p>`;
+        }
+
+        function renderFeatureTable() {
+            const result = state.lastScan;
+            const target = $("featureTable");
+            if (!result || result.type !== "URL") {
+                target.innerHTML = `<p style="color:var(--muted);font-size:13px;">Scan a URL to view extracted domain features.</p>`;
+                return;
+            }
+
+            const rows = [
+                ["Normalized URL", result.normalized],
+                ["Hostname", result.hostname],
+                ["Root Domain", result.rootDomain],
+                ["Expected Domain", result.officialDomain],
+                ["Risk Score", `${result.score}/100`],
+                ["SHA-256", result.hash || "Pending"]
+            ];
+
+            target.innerHTML = `
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Feature</th><th>Value</th></tr></thead>
+                        <tbody>${rows.map(([key, value]) => `<tr><td>${key}</td><td>${escapeHtml(value)}</td></tr>`).join("")}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function updateEvidencePanel() {
+            const latest = state.lastScan || getHistory()[0];
+            const target = $("latestEvidence");
+            if (!latest) {
+                target.innerHTML = `<p style="color:var(--muted);">No scan evidence available yet.</p>`;
+                return;
+            }
+            target.innerHTML = `
+                <h3>Latest Evidence Snapshot</h3>
+                <div class="table-wrap">
+                    <table>
+                        <tbody>
+                            <tr><th>Evidence ID</th><td>${latest.id}</td></tr>
+                            <tr><th>Timestamp</th><td>${latest.timestamp}</td></tr>
+                            <tr><th>Type</th><td>${latest.type}</td></tr>
+                            <tr><th>Verdict</th><td>${latest.verdict}</td></tr>
+                            <tr><th>Risk Score</th><td>${latest.score}/100</td></tr>
+                            <tr><th>Input</th><td>${escapeHtml(latest.input)}</td></tr>
+                            <tr><th>SHA-256</th><td>${escapeHtml(latest.hash || "Generated after scan")}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function generateEvidenceReport() {
+            const latest = state.lastScan || getHistory()[0];
+            if (!latest) {
+                alert("Run a scan first.");
+                return;
+            }
+
+            if (!latest.hash) latest.hash = await generateHash(latest.input);
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let y = 18;
+
+            doc.setFontSize(16);
+            doc.text("PhishGuard Digital Evidence Report", 14, y);
+            y += 10;
+            doc.setFontSize(11);
+            const lines = [
+                `Evidence ID: ${latest.id}`,
+                `Timestamp: ${latest.timestamp}`,
+                `Scan Type: ${latest.type}`,
+                `Verdict: ${latest.verdict}`,
+                `Risk Score: ${latest.score}/100`,
+                `Input: ${latest.input}`,
+                latest.hostname ? `Detected Hostname: ${latest.hostname}` : "",
+                latest.officialDomain ? `Expected Official Domain: ${latest.officialDomain}` : "",
+                `SHA-256 Fingerprint: ${latest.hash}`
+            ].filter(Boolean);
+
+            lines.forEach(line => {
+                const wrapped = doc.splitTextToSize(line, 180);
+                doc.text(wrapped, 14, y);
+                y += wrapped.length * 6;
+            });
+
+            y += 4;
+            doc.setFontSize(13);
+            doc.text("Detected Risk Factors", 14, y);
+            y += 8;
+            doc.setFontSize(10);
+            latest.reasons.forEach(reason => {
+                const text = `- ${reason.label} (${reason.points}): ${reason.detail}`;
+                const wrapped = doc.splitTextToSize(text, 180);
+                if (y > 270) { doc.addPage(); y = 16; }
+                doc.text(wrapped, 14, y);
+                y += wrapped.length * 5 + 2;
+            });
+
+            y += 4;
+            doc.setFontSize(13);
+            doc.text("Recommended Action", 14, y);
+            y += 8;
+            doc.setFontSize(10);
+            const action = latest.verdict === "Safe"
+                ? "No major risk factors were found. Still verify login pages before entering sensitive information."
+                : "Do not open the link or share OTP, password, PIN, CVV, or personal data. Report the message/link to the relevant service provider.";
+            doc.text(doc.splitTextToSize(action, 180), 14, y);
+            doc.save(`PhishGuard_Evidence_${latest.id}.pdf`);
+        }
+
+        function exportHistoryCSV() {
+            const history = getHistory();
+            if (!history.length) return alert("No history to export.");
+            const rows = ["Evidence ID,Time,Type,Verdict,Score,Input"];
+            history.forEach(item => rows.push([
+                item.id,
+                item.timestamp,
+                item.type,
+                item.verdict,
+                item.score,
+                item.input.replace(/"/g, '""')
+            ].map(value => `"${value}"`).join(",")));
+            downloadFile("phishguard_history.csv", rows.join("\n"), "text/csv");
+        }
+
+        function exportHistoryJSON() {
+            const history = getHistory();
+            if (!history.length) return alert("No history to export.");
+            downloadFile("phishguard_history.json", JSON.stringify(history, null, 2), "application/json");
+        }
+
+        async function exportHistoryPDF() {
+            const history = getHistory();
+            if (!history.length) return alert("No history to export.");
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            let y = 16;
+            doc.setFontSize(15);
+            doc.text("PhishGuard Scan History", 14, y);
+            y += 10;
+            doc.setFontSize(10);
+            history.forEach(item => {
+                if (y > 270) { doc.addPage(); y = 16; }
+                const line = `${item.timestamp} | ${item.type} | ${item.verdict} | ${item.score}/100 | ${item.input}`;
+                const wrapped = doc.splitTextToSize(line, 180);
+                doc.text(wrapped, 14, y);
+                y += wrapped.length * 5 + 4;
+            });
+            doc.save("phishguard_history.pdf");
+        }
+
+        function downloadFile(filename, content, type) {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = filename;
+            anchor.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function startQR() {
+            $("qrRegion").classList.add("show");
+            $("startQrBtn").style.display = "none";
+            $("stopQrBtn").style.display = "inline-flex";
+            if (state.html5QrCode) return;
+            try {
+                state.html5QrCode = new Html5Qrcode("qr-reader");
+                const cameras = await Html5Qrcode.getCameras();
+                if (!cameras.length) throw new Error("No camera found");
+                await state.html5QrCode.start(cameras[0].id, { fps: 10, qrbox: { width: 250, height: 250 } }, text => {
+                    $("urlInput").value = text;
+                    stopQR();
+                    scanURL();
+                });
+            } catch (error) {
+                alert(`Camera error: ${error.message || error}`);
+                stopQR();
+            }
+        }
+
+        function stopQR() {
+            $("qrRegion").classList.remove("show");
+            $("startQrBtn").style.display = "inline-flex";
+            $("stopQrBtn").style.display = "none";
+            if (state.html5QrCode) {
+                state.html5QrCode.stop()
+                    .then(() => state.html5QrCode.clear())
+                    .catch(() => {})
+                    .finally(() => { state.html5QrCode = null; });
+            }
+        }
+
+        function checkPassword() {
+            const password = $("passwordInput").value;
+            const checks = [
+                { ok: password.length >= 10, text: "At least 10 characters" },
+                { ok: /[A-Z]/.test(password), text: "Uppercase letter" },
+                { ok: /[a-z]/.test(password), text: "Lowercase letter" },
+                { ok: /\d/.test(password), text: "Number" },
+                { ok: /[^A-Za-z0-9]/.test(password), text: "Special character" }
+            ];
+            const score = checks.filter(check => check.ok).length * 20;
+            const verdict = score >= 80 ? "Strong" : score >= 50 ? "Medium" : "Weak";
+            const result = $("passwordResult");
+            result.className = "result-box show";
+            result.innerHTML = `
+                <h3>${verdict} Password - ${score}/100</h3>
+                <div class="meter"><span style="width:${score}%;background:${score >= 80 ? "var(--safe)" : score >= 50 ? "var(--warn)" : "var(--danger)"};"></span></div>
+                <ul class="reason-list">${checks.map(check => `<li>${check.ok ? "Passed" : "Missing"}: ${check.text}</li>`).join("")}</ul>
+            `;
+        }
+
+        function generatePassword() {
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*";
+            let password = "";
+            crypto.getRandomValues(new Uint32Array(18)).forEach(value => {
+                password += chars[value % chars.length];
+            });
+            $("passwordInput").value = password;
+            checkPassword();
+        }
+
+        function loadSampleUrl() {
+            $("serviceSelect").value = "paypal.com";
+            $("urlInput").value = "https://paypal-secure-login.verify-account.xyz/session?id=9021";
+        }
+
+        function loadSampleSms() {
+            $("smsInput").value = "URGENT: Your bank KYC will expire today. Verify your account now at http://secure-kyc-update.click or your account will be blocked.";
+        }
+
+        function copyLatestResult() {
+            const latest = state.lastScan || getHistory()[0];
+            if (!latest) return;
+            const text = `PhishGuard Result\nType: ${latest.type}\nVerdict: ${latest.verdict}\nScore: ${latest.score}/100\nInput: ${latest.input}\nEvidence ID: ${latest.id}`;
+            navigator.clipboard.writeText(text).then(() => alert("Result copied."));
+        }
+
+        function notifyIfNeeded(result) {
+            if (!$("notificationToggle").checked || result.verdict === "Safe") return;
+            if (!("Notification" in window)) return;
+            if (Notification.permission === "granted") {
+                new Notification("PhishGuard Alert", { body: `${result.verdict} detected with score ${result.score}/100.` });
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+        }
+
+        function toggleTheme() {
+            const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+            document.documentElement.dataset.theme = next;
+            localStorage.setItem("phishguard_theme", next);
+        }
+
+        function loadSettings() {
+            document.documentElement.dataset.theme = localStorage.getItem("phishguard_theme") || "light";
+            ["notificationToggle", "autoScanToggle", "strictToggle"].forEach(id => {
+                const saved = localStorage.getItem(`phishguard_${id}`);
+                if (saved !== null) $(id).checked = saved === "true";
+                $(id).addEventListener("change", () => localStorage.setItem(`phishguard_${id}`, $(id).checked));
+            });
+        }
+
+        async function generateHash(data) {
+            const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(data));
+            return Array.from(new Uint8Array(buffer)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+        }
+
+        function createId() {
+            return `PG-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        }
+
+        function badgeClass(verdict) {
+            if (verdict === "Safe") return "safe";
+            if (verdict === "Suspicious") return "warn";
+            return "danger";
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? "").replace(/[&<>"']/g, char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#039;"
+            }[char]));
+        }
+
+        init();
+    </script>
+</body>
+</html>
